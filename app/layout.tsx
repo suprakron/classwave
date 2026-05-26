@@ -5,6 +5,10 @@ import { ToastProvider } from "@/components/ui/toast"
 export const metadata: Metadata = {
   title: "MoleMeUp — ระบบเรียนรู้ผ่านวีดีโอ",
   description: "ระบบจัดการการเรียนรู้ผ่านวีดีโอแบบ Interactive สำหรับครูและนักเรียน",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

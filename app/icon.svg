@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect width="512" height="512" rx="110" fill="url(#bg)"/>
+
+  <!-- Mole body (dark brown oval) -->
+  <ellipse cx="256" cy="330" rx="120" ry="90" fill="#5c3d1e"/>
+
+  <!-- Mole tummy (light) -->
+  <ellipse cx="256" cy="345" rx="70" ry="55" fill="#c9956a"/>
+
+  <!-- Mole head -->
+  <ellipse cx="256" cy="235" rx="105" ry="95" fill="#5c3d1e"/>
+
+  <!-- Mole snout -->
+  <ellipse cx="256" cy="278" rx="42" ry="28" fill="#c9956a"/>
+  <!-- Nose -->
+  <ellipse cx="256" cy="268" rx="14" ry="10" fill="#2d1a0e"/>
+
+  <!-- Eyes (closed, happy) -->
+  <path d="M215 230 Q225 218 235 230" stroke="#2d1a0e" stroke-width="7" fill="none" stroke-linecap="round"/>
+  <path d="M277 230 Q287 218 297 230" stroke="#2d1a0e" stroke-width="7" fill="none" stroke-linecap="round"/>
+
+  <!-- Graduation cap -->
+  <!-- Cap board -->
+  <rect x="166" y="145" width="180" height="18" rx="4" fill="#1e1b4b"/>
+  <!-- Cap top -->
+  <rect x="200" y="105" width="112" height="45" rx="6" fill="#1e1b4b"/>
+  <!-- Tassel string -->
+  <line x1="346" y1="154" x2="346" y2="190" stroke="#fbbf24" stroke-width="5"/>
+  <!-- Tassel end -->
+  <circle cx="346" cy="196" r="8" fill="#fbbf24"/>
+
+  <!-- Small play button badge (bottom right) -->
+  <circle cx="390" cy="390" r="52" fill="white" opacity="0.95"/>
+  <polygon points="376,368 376,412 418,390" fill="#7c3aed"/>
+</svg>
