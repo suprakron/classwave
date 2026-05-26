@@ -7,7 +7,7 @@ import type { Question, Video, QuestionResponse } from "@/lib/types"
 import { createClient } from "@/lib/supabase/client"
 
 // Dynamic import เพื่อหลีกเลี่ยง SSR issue
-const ReactPlayer = dynamic(() => import("react-player/lazy"), { ssr: false })
+const ReactPlayer = dynamic(() => import("react-player"), { ssr: false })
 
 interface Props {
   video: Video
