@@ -1,8 +1,9 @@
 "use client"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Play, LayoutDashboard, BookOpen, Video, BarChart3, LogOut, GraduationCap, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { createClient } from "@/lib/supabase/client"
 import type { Profile } from "@/lib/types"
 
 interface SidebarProps {
@@ -11,7 +12,14 @@ interface SidebarProps {
 
 export function Sidebar({ profile }: SidebarProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const isTeacher = profile.role === "teacher"
+
+  async function handleLogout() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push("/login")
+  }
 
   const teacherLinks = [
     { href: "/teacher", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -83,13 +91,13 @@ export function Sidebar({ profile }: SidebarProps) {
             <p className="text-xs text-slate-400 truncate">{profile.email}</p>
           </div>
         </div>
-        <Link
-          href="/logout"
+        <button
+          onClick={handleLogout}
           className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors w-full"
         >
           <LogOut size={16} />
           ออกจากระบบ
-        </Link>
+        </button>
       </div>
     </aside>
   )

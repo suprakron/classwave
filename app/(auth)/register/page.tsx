@@ -34,6 +34,18 @@ function RegisterForm() {
     }
     if (data.user) {
       await supabase.from("profiles").insert({ id: data.user.id, name, email, role })
+
+      // ถ้ายังไม่มี session (Supabase ต้องการยืนยัน email) ให้ sign in ใหม่ทันที
+      if (!data.session) {
+        const { error: loginError } = await supabase.auth.signInWithPassword({ email, password })
+        if (loginError) {
+          toast.error("สมัครสำเร็จ กรุณาเข้าสู่ระบบ")
+          router.push("/login")
+          setLoading(false)
+          return
+        }
+      }
+
       toast.success("สมัครใช้งานสำเร็จ!")
       router.push(role === "teacher" ? "/teacher" : "/student")
       router.refresh()
