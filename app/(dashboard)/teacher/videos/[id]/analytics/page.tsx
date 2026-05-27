@@ -1,9 +1,7 @@
 import { redirect, notFound } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import Link from "next/link"
-import { ArrowLeft, Users, CheckCircle, XCircle, Clock, TrendingUp, BarChart2 } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { ArrowLeft, CheckCircle, XCircle } from "lucide-react"
 import { formatDuration } from "@/lib/utils"
 import { cn } from "@/lib/utils"
 
@@ -13,25 +11,33 @@ export default async function VideoAnalyticsPage({ params }: { params: Promise<{
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect("/login")
 
-  const [{ data: video }, { data: questions }, { data: progresses }, { data: responses }, { data: enrollments }] = await Promise.all([
-    supabase.from("videos").select("*, classrooms(id, name, cover_color)").eq("id", id).eq("teacher_id", user.id).single(),
-    supabase.from("questions").select("*").eq("video_id", id).order("timestamp_seconds"),
-    supabase.from("video_progress").select("*, profiles(name, email)").eq("video_id", id),
-    supabase.from("question_responses").select("*, profiles(name)").in("question_id", []),
-    supabase.from("enrollments").select("*, profiles(id, name, email)").eq("classroom_id", ""),
-  ])
-
+  const { data: video } = await supabase
+    .from("videos")
+    .select("*, classrooms(id, name, cover_color)")
+    .eq("id", id)
+    .eq("teacher_id", user.id)
+    .single()
   if (!video) notFound()
+
   const classroom = video.classrooms as { id: string; name: string; cover_color: string }
 
-  // Get enrolled students
+  const { data: questions } = await supabase
+    .from("questions")
+    .select("*")
+    .eq("video_id", id)
+    .order("timestamp_seconds")
+
   const { data: enrolled } = await supabase
     .from("enrollments")
     .select("*, profiles(id, name, email)")
     .eq("classroom_id", classroom.id)
 
-  const questionIds = questions?.map(q => q.id) || []
+  const { data: progresses } = await supabase
+    .from("video_progress")
+    .select("*")
+    .eq("video_id", id)
 
+  const questionIds = questions?.map(q => q.id) || []
   const { data: allResponses } = questionIds.length > 0
     ? await supabase.from("question_responses").select("*").in("question_id", questionIds)
     : { data: [] }
@@ -43,7 +49,8 @@ export default async function VideoAnalyticsPage({ params }: { params: Promise<{
     const progress = progressMap.get(profile.id)
     const studentResponses = allResponses?.filter(r => r.student_id === profile.id) || []
     const correct = studentResponses.filter(r => r.is_correct).length
-    return { profile, progress, responses: studentResponses, correct, total: questions?.length ?? 0 }
+    const total = questions?.length ?? 0
+    return { profile, progress, correct, total, answered: studentResponses.length }
   }) || []
 
   const avgWatch = progresses?.length
@@ -51,140 +58,237 @@ export default async function VideoAnalyticsPage({ params }: { params: Promise<{
     : 0
   const completed = progresses?.filter(p => p.completed).length ?? 0
 
-  // Per-question stats
   const questionStats = questions?.map(q => {
-    const qResponses = allResponses?.filter(r => r.question_id === q.id) || []
-    const correctCount = qResponses.filter(r => r.is_correct).length
-    return { q, total: qResponses.length, correct: correctCount }
+    const qR = allResponses?.filter(r => r.question_id === q.id) || []
+    const correct = qR.filter(r => r.is_correct).length
+    return { q, total: qR.length, correct }
   }) || []
 
+  const avgScore = studentStats.length > 0
+    ? Math.round(studentStats.reduce((s, st) => s + (st.total > 0 ? (st.correct / st.total) * 100 : 0), 0) / studentStats.length)
+    : 0
+
   return (
-    <div className="p-8 max-w-6xl animate-fade-in">
-      <Link href={`/teacher/videos/${id}`} className="flex items-center gap-2 text-sm text-slate-500 hover:text-violet-600 mb-6 transition-colors">
-        <ArrowLeft size={16} /> กลับไปแก้ไขวีดีโอ
+    <div className="min-h-full p-6" style={{ background: "#0F172A" }}>
+      {/* Back link */}
+      <Link
+        href={`/teacher/videos/${id}`}
+        className="inline-flex items-center gap-2 text-sm mb-6 transition-colors"
+        style={{ color: "#94A3B8" }}
+      >
+        <ArrowLeft size={15} /> Back to video
       </Link>
 
-      <div className="flex items-center gap-3 mb-8">
-        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: `${classroom.cover_color || "#7c3aed"}22` }}>
-          <BarChart2 size={24} style={{ color: classroom.cover_color || "#7c3aed" }} />
+      {/* ── Top header ── */}
+      <div
+        className="rounded-2xl p-5 mb-6 flex items-center gap-4"
+        style={{ background: "linear-gradient(135deg, #1E3A5F 0%, #1E293B 100%)" }}
+      >
+        <div
+          className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
+          style={{ background: classroom.cover_color ? `${classroom.cover_color}33` : "#312E81" }}
+        >
+          🎬
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Analytics: {video.title}</h1>
-          <p className="text-slate-500 text-sm">{classroom.name}</p>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-bold mb-1" style={{ color: "#60A5FA" }}>{classroom.name}</p>
+          <h1 className="text-xl font-black text-white truncate">{video.title}</h1>
+          <p className="text-xs mt-0.5" style={{ color: "#94A3B8" }}>Student Results Overview</p>
+        </div>
+        {/* Class status pills */}
+        <div className="hidden lg:flex gap-3 flex-shrink-0">
+          {[
+            { label: "Students", value: enrolled?.length ?? 0, color: "#3B82F6" },
+            { label: "Watched", value: progresses?.length ?? 0, color: "#10B981" },
+            { label: "Completed", value: completed, color: "#8B5CF6" },
+            { label: "Avg Watch", value: `${avgWatch}%`, color: "#F59E0B" },
+            { label: "Avg Score", value: `${avgScore}%`, color: "#EF4444" },
+          ].map(s => (
+            <div key={s.label} className="text-center">
+              <p className="text-xl font-black" style={{ color: s.color }}>{s.value}</p>
+              <p className="text-[10px] font-semibold" style={{ color: "#94A3B8" }}>{s.label}</p>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Summary stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      {/* ── Stats cards (mobile) ── */}
+      <div className="grid grid-cols-3 lg:hidden gap-3 mb-6">
         {[
-          { label: "นักเรียนทั้งหมด", value: enrolled?.length ?? 0, icon: <Users size={20} />, color: "bg-violet-100 text-violet-600" },
-          { label: "ดูแล้ว", value: progresses?.length ?? 0, icon: <TrendingUp size={20} />, color: "bg-blue-100 text-blue-600" },
-          { label: "ดูจบแล้ว", value: completed, icon: <CheckCircle size={20} />, color: "bg-emerald-100 text-emerald-600" },
-          { label: "เฉลี่ยดูถึง", value: `${avgWatch}%`, icon: <Clock size={20} />, color: "bg-amber-100 text-amber-600" },
-        ].map((s, i) => (
-          <Card key={i}>
-            <CardContent className="pt-5">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${s.color}`}>{s.icon}</div>
-              <p className="text-2xl font-bold text-slate-900">{s.value}</p>
-              <p className="text-sm text-slate-500 mt-1">{s.label}</p>
-            </CardContent>
-          </Card>
+          { label: "Students", value: enrolled?.length ?? 0, emoji: "👨‍🎓", color: "#3B82F6" },
+          { label: "Completed", value: completed, emoji: "✅", color: "#10B981" },
+          { label: "Avg Score", value: `${avgScore}%`, emoji: "🏆", color: "#F59E0B" },
+        ].map(s => (
+          <div key={s.label} className="rounded-2xl p-4 text-center" style={{ background: "#1E293B" }}>
+            <span className="text-2xl block mb-1">{s.emoji}</span>
+            <p className="text-xl font-black" style={{ color: s.color }}>{s.value}</p>
+            <p className="text-xs" style={{ color: "#94A3B8" }}>{s.label}</p>
+          </div>
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Per-student table */}
-        <Card>
-          <div className="px-6 pt-6 pb-3 border-b border-slate-100">
-            <h2 className="font-semibold text-slate-900">ความคืบหน้าของนักเรียน</h2>
+      <div className="grid lg:grid-cols-2 gap-5">
+        {/* ── Student Monitoring ── */}
+        <div className="rounded-2xl overflow-hidden" style={{ background: "#1E293B" }}>
+          <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid #334155" }}>
+            <h2 className="font-black text-white flex items-center gap-2">
+              <span>👥</span> Student Monitoring
+            </h2>
+            <span className="text-xs font-bold px-2 py-1 rounded-full" style={{ background: "#1E3A5F", color: "#60A5FA" }}>
+              {studentStats.length} students
+            </span>
           </div>
-          <CardContent className="pt-4">
+          <div className="p-4">
             {studentStats.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-6">ยังไม่มีนักเรียนในห้องเรียนนี้</p>
+              <p className="text-center py-8 text-sm" style={{ color: "#94A3B8" }}>
+                ยังไม่มีนักเรียน
+              </p>
             ) : (
-              <div className="space-y-3">
-                {studentStats.map(({ profile, progress, correct, total }) => {
+              <div className="flex flex-col gap-3">
+                {studentStats.map(({ profile, progress, correct, total, answered }) => {
                   const pct = progress?.watch_percentage ?? 0
-                  const answered = progress ? (total > 0 ? Math.min(correct + (total - correct), total) : 0) : 0
+                  const scorePct = answered > 0 ? Math.round((correct / answered) * 100) : null
+                  const scoreColor = scorePct === null ? "#64748B" : scorePct >= 70 ? "#10B981" : scorePct >= 40 ? "#F59E0B" : "#EF4444"
                   return (
-                    <div key={profile.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors">
-                      <div className="w-9 h-9 rounded-full bg-violet-100 flex items-center justify-center text-violet-700 font-semibold text-sm shrink-0">
+                    <div
+                      key={profile.id}
+                      className="rounded-2xl p-4 flex items-center gap-3"
+                      style={{ background: "#0F172A" }}
+                    >
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center font-black text-base flex-shrink-0"
+                        style={{ background: "#312E81", color: "#A78BFA" }}
+                      >
                         {profile.name?.charAt(0)}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-800 truncate">{profile.name}</p>
-                        <div className="mt-1 flex items-center gap-2">
-                          <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-violet-400 rounded-full" style={{ width: `${pct}%` }} />
+                        <p className="text-sm font-bold text-white truncate">{profile.name}</p>
+                        {/* Watch progress bar */}
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <div className="flex-1 h-1.5 rounded-full" style={{ background: "#1E293B" }}>
+                            <div
+                              className="h-full rounded-full transition-all"
+                              style={{ width: `${pct}%`, background: "#3B82F6" }}
+                            />
                           </div>
-                          <span className="text-xs text-slate-400 shrink-0">{pct}%</span>
+                          <span className="text-[10px] font-bold flex-shrink-0" style={{ color: "#60A5FA" }}>
+                            {pct}%
+                          </span>
                         </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        {progress ? (
-                          <>
-                            {progress.completed
-                              ? <Badge variant="success">จบแล้ว</Badge>
-                              : <Badge variant="warning">กำลังดู</Badge>}
-                            {total > 0 && (
-                              <p className="text-xs text-slate-400 mt-1">{correct}/{total} ถูก</p>
-                            )}
-                          </>
-                        ) : (
-                          <Badge variant="default">ยังไม่เปิด</Badge>
-                        )}
+                      <div className="text-right flex-shrink-0 ml-2">
+                        <span
+                          className="text-sm font-black block"
+                          style={{ color: scoreColor }}
+                        >
+                          {scorePct !== null ? `${scorePct}%` : "—"}
+                        </span>
+                        <span className="text-[10px]" style={{ color: "#64748B" }}>
+                          {correct}/{total} ✓
+                        </span>
                       </div>
+                      {progress?.completed && (
+                        <span
+                          className="text-[10px] px-2 py-0.5 rounded-full font-bold ml-1 flex-shrink-0"
+                          style={{ background: "#064E3B", color: "#34D399" }}
+                        >
+                          Done
+                        </span>
+                      )}
                     </div>
                   )
                 })}
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Per-question stats */}
-        <Card>
-          <div className="px-6 pt-6 pb-3 border-b border-slate-100">
-            <h2 className="font-semibold text-slate-900">สถิติรายคำถาม</h2>
           </div>
-          <CardContent className="pt-4">
+        </div>
+
+        {/* ── Quiz Analytics ── */}
+        <div className="rounded-2xl overflow-hidden" style={{ background: "#1E293B" }}>
+          <div className="px-5 py-4" style={{ borderBottom: "1px solid #334155" }}>
+            <h2 className="font-black text-white flex items-center gap-2">
+              <span>🧩</span> Quiz Performance
+            </h2>
+          </div>
+          <div className="p-4">
             {questionStats.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-6">ยังไม่มีคำถาม</p>
+              <p className="text-center py-8 text-sm" style={{ color: "#94A3B8" }}>
+                ยังไม่มีคำถาม
+              </p>
             ) : (
-              <div className="space-y-4">
-                {questionStats.map(({ q, total: t, correct: c }) => {
+              <div className="flex flex-col gap-4">
+                {questionStats.map(({ q, total: t, correct: c }, idx) => {
                   const pct = t > 0 ? Math.round((c / t) * 100) : 0
+                  const barColor = pct >= 70 ? "#10B981" : pct >= 40 ? "#F59E0B" : "#EF4444"
                   return (
                     <div key={q.id}>
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="flex items-start gap-2">
-                          <span className="text-xs text-slate-400 font-mono bg-slate-100 px-2 py-0.5 rounded shrink-0">
-                            {formatDuration(q.timestamp_seconds)}
-                          </span>
-                          <p className="text-sm text-slate-700 line-clamp-2">{q.question_text}</p>
+                      <div className="flex items-start gap-2 mb-2">
+                        <span
+                          className="text-xs font-black px-2 py-0.5 rounded-lg flex-shrink-0"
+                          style={{ background: "#0F172A", color: "#60A5FA" }}
+                        >
+                          Q{idx + 1}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-white font-medium line-clamp-2">{q.question_text}</p>
+                          <p className="text-[10px] mt-0.5 font-mono" style={{ color: "#64748B" }}>
+                            ⏱ {formatDuration(q.timestamp_seconds)}
+                          </p>
                         </div>
-                        <span className={cn("text-xs font-semibold shrink-0", pct >= 70 ? "text-emerald-600" : pct >= 40 ? "text-amber-600" : "text-red-500")}>
+                        <span className="text-sm font-black flex-shrink-0" style={{ color: barColor }}>
                           {pct}%
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                          <div className={cn("h-full rounded-full transition-all", pct >= 70 ? "bg-emerald-400" : pct >= 40 ? "bg-amber-400" : "bg-red-400")}
-                            style={{ width: `${pct}%` }} />
+                        <div className="flex-1 h-2 rounded-full" style={{ background: "#0F172A" }}>
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{ width: `${pct}%`, background: barColor }}
+                          />
                         </div>
-                        <span className="text-xs text-slate-400">{c}/{t} คน</span>
-                      </div>
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className="flex items-center gap-1 text-xs text-emerald-600"><CheckCircle size={11} /> {c} ถูก</span>
-                        <span className="flex items-center gap-1 text-xs text-red-500"><XCircle size={11} /> {t - c} ผิด</span>
+                        <div className="flex items-center gap-3 text-[10px] flex-shrink-0">
+                          <span className={cn("flex items-center gap-1")} style={{ color: "#34D399" }}>
+                            <CheckCircle size={10} /> {c}
+                          </span>
+                          <span className={cn("flex items-center gap-1")} style={{ color: "#F87171" }}>
+                            <XCircle size={10} /> {t - c}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   )
                 })}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Assignment Control ── */}
+      <div className="mt-5 rounded-2xl p-5" style={{ background: "#1E293B" }}>
+        <h2 className="font-black text-white flex items-center gap-2 mb-4">
+          <span>📋</span> Assignment Control Center
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { label: "Total Questions", value: questions?.length ?? 0, emoji: "❓", color: "#60A5FA" },
+            { label: "Total Responses", value: allResponses?.length ?? 0, emoji: "📝", color: "#A78BFA" },
+            { label: "Correct Answers", value: allResponses?.filter(r => r.is_correct).length ?? 0, emoji: "✅", color: "#34D399" },
+            { label: "Avg Completion", value: `${avgWatch}%`, emoji: "📊", color: "#F59E0B" },
+          ].map(s => (
+            <div
+              key={s.label}
+              className="rounded-xl p-4 flex items-center gap-3"
+              style={{ background: "#0F172A" }}
+            >
+              <span className="text-2xl">{s.emoji}</span>
+              <div>
+                <p className="text-xl font-black" style={{ color: s.color }}>{s.value}</p>
+                <p className="text-[11px] font-semibold" style={{ color: "#64748B" }}>{s.label}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )

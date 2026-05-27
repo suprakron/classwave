@@ -154,68 +154,97 @@ export function InteractivePlayer({ video, questions, studentId, initialProgress
         )}
       </div>
 
-      {/* Quiz Overlay */}
+      {/* Quiz Overlay — chemistry theme */}
       {quiz && (
-        <div className="absolute inset-0 quiz-overlay flex items-center justify-center p-6 z-20">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full animate-scale-in overflow-hidden">
-            <div className="bg-violet-600 px-6 py-4">
-              <div className="flex items-center gap-2 text-white/80 text-xs mb-1">
-                <Lightbulb size={14} />
-                คำถาม ณ เวลา {formatDuration(quiz.question.timestamp_seconds)}
+        <div className="absolute inset-0 quiz-overlay flex items-center justify-center p-6 z-20"
+          style={{ background: "rgba(15,23,42,0.85)" }}>
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full animate-scale-in overflow-hidden">
+            {/* Header */}
+            <div className="px-6 py-4" style={{ background: "linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%)" }}>
+              <div className="flex items-center gap-2 text-white/70 text-xs mb-1.5">
+                <Lightbulb size={13} />
+                <span>⚗️ Chemistry Question · {formatDuration(quiz.question.timestamp_seconds)}</span>
               </div>
-              <p className="text-white font-semibold text-base leading-snug">{quiz.question.question_text}</p>
+              <p className="text-white font-bold text-base leading-snug">{quiz.question.question_text}</p>
             </div>
+
             <div className="p-5">
               {!quiz.answered ? (
                 <div className="space-y-2.5">
                   {quiz.question.options.map((opt, i) => (
                     <button key={i} onClick={() => answerQuestion(opt)}
-                      className="w-full text-left px-4 py-3 rounded-xl border-2 border-slate-200 text-slate-700 text-sm font-medium hover:border-violet-400 hover:bg-violet-50 transition-all">
-                      <span className="text-slate-400 mr-2">{String.fromCharCode(65 + i)}.</span>{opt}
+                      className="w-full text-left px-4 py-3 rounded-2xl border-2 text-slate-700 text-sm font-medium transition-all"
+                      style={{ borderColor: "#A5D6A7" }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "#2E7D32"; (e.currentTarget as HTMLElement).style.background = "#F1F8E9" }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "#A5D6A7"; (e.currentTarget as HTMLElement).style.background = "" }}
+                    >
+                      <span className="font-bold mr-2" style={{ color: "#2E7D32" }}>{String.fromCharCode(65 + i)}.</span>
+                      {opt}
                     </button>
                   ))}
                 </div>
               ) : (
                 <div>
-                  <div className={cn("flex items-center gap-3 p-4 rounded-xl mb-4", quiz.isCorrect ? "bg-emerald-50" : "bg-red-50")}>
+                  {/* Result banner */}
+                  <div
+                    className="flex items-center gap-3 p-4 rounded-2xl mb-4"
+                    style={{ background: quiz.isCorrect ? "#F1F8E9" : "#FFF3F3" }}
+                  >
                     {quiz.isCorrect
-                      ? <CheckCircle size={24} className="text-emerald-500 shrink-0" />
-                      : <XCircle size={24} className="text-red-500 shrink-0" />}
+                      ? <CheckCircle size={26} style={{ color: "#2E7D32" }} className="shrink-0" />
+                      : <XCircle size={26} style={{ color: "#C62828" }} className="shrink-0" />}
                     <div>
-                      <p className={cn("font-semibold", quiz.isCorrect ? "text-emerald-700" : "text-red-700")}>
-                        {quiz.isCorrect ? "ถูกต้อง! 🎉" : "ไม่ถูกต้อง"}
+                      <p className="font-black text-base" style={{ color: quiz.isCorrect ? "#1B5E20" : "#B71C1C" }}>
+                        {quiz.isCorrect ? "🎉 Correct! Great work!" : "❌ Not quite right"}
                       </p>
                       {!quiz.isCorrect && (
-                        <p className="text-xs text-slate-500 mt-0.5">คำตอบที่ถูก: <span className="font-medium text-emerald-600">{quiz.question.correct_answer}</span></p>
+                        <p className="text-xs mt-0.5" style={{ color: "#64748B" }}>
+                          Correct answer: <span className="font-bold" style={{ color: "#2E7D32" }}>{quiz.question.correct_answer}</span>
+                        </p>
                       )}
                     </div>
                   </div>
 
+                  {/* Options review */}
                   <div className="space-y-2 mb-4">
                     {quiz.question.options.map((opt, i) => {
                       const isSelected = opt === quiz.selectedAnswer
                       const isCorrectOpt = opt === quiz.question.correct_answer
                       return (
-                        <div key={i} className={cn("flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm",
-                          isCorrectOpt ? "bg-emerald-100 text-emerald-700" :
-                          isSelected ? "bg-red-100 text-red-600" : "text-slate-500")}>
-                          {isCorrectOpt ? <CheckCircle size={16} /> : isSelected ? <XCircle size={16} /> : <span className="w-4" />}
-                          <span className="text-slate-400 mr-1">{String.fromCharCode(65 + i)}.</span>{opt}
+                        <div key={i}
+                          className="flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm font-medium"
+                          style={{
+                            background: isCorrectOpt ? "#E8F5E9" : isSelected ? "#FFEBEE" : "#F8FAFC",
+                            color: isCorrectOpt ? "#1B5E20" : isSelected ? "#C62828" : "#94A3B8",
+                          }}>
+                          {isCorrectOpt
+                            ? <CheckCircle size={15} style={{ color: "#2E7D32" }} />
+                            : isSelected
+                              ? <XCircle size={15} style={{ color: "#C62828" }} />
+                              : <span className="w-4 h-4" />}
+                          <span className="font-bold mr-1" style={{ color: isCorrectOpt ? "#2E7D32" : isSelected ? "#C62828" : "#CBD5E1" }}>
+                            {String.fromCharCode(65 + i)}.
+                          </span>
+                          {opt}
                         </div>
                       )
                     })}
                   </div>
 
+                  {/* Explanation */}
                   {quiz.question.explanation && (
-                    <div className="bg-blue-50 rounded-xl px-4 py-3 mb-4">
-                      <p className="text-xs font-semibold text-blue-700 mb-1 flex items-center gap-1"><Lightbulb size={12} /> คำอธิบาย</p>
-                      <p className="text-xs text-blue-600">{quiz.question.explanation}</p>
+                    <div className="rounded-2xl px-4 py-3 mb-4" style={{ background: "#E8F5E9" }}>
+                      <p className="text-xs font-black mb-1 flex items-center gap-1" style={{ color: "#1B5E20" }}>
+                        <Lightbulb size={12} /> 🧪 Explanation
+                      </p>
+                      <p className="text-xs" style={{ color: "#2E7D32" }}>{quiz.question.explanation}</p>
                     </div>
                   )}
 
                   <button onClick={continueVideo}
-                    className="w-full py-3 bg-violet-600 text-white font-semibold rounded-xl hover:bg-violet-700 transition-colors flex items-center justify-center gap-2">
-                    <Play size={16} fill="white" /> ดูต่อ
+                    className="w-full py-3 text-white font-black rounded-2xl transition-opacity hover:opacity-90 flex items-center justify-center gap-2"
+                    style={{ background: "linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%)" }}>
+                    <Play size={16} fill="white" /> Continue Watching
                   </button>
                 </div>
               )}
