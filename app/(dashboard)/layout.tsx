@@ -16,7 +16,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!profile) redirect("/login")
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen" style={{ background: "#FFF0F0" }}>
       <Sidebar profile={profile} />
       <main className="flex-1 overflow-auto">
         {children}
