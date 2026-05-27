@@ -5,19 +5,21 @@ import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 import type { Profile } from "@/lib/types"
 
-interface SidebarProps {
-  profile: Profile
-}
+interface SidebarProps { profile: Profile }
 
 const teacherLinks = [
-  { href: "/teacher", label: "Dashboard", emoji: "🏠", exact: true },
-  { href: "/teacher/classrooms", label: "Course", emoji: "📚" },
-  { href: "/teacher/videos", label: "Videos", emoji: "🎬" },
+  { href: "/teacher",              label: "Dashboard",  emoji: "🏠", exact: true },
+  { href: "/teacher/classrooms",   label: "Course",     emoji: "📚" },
+  { href: "/teacher/assignments",  label: "Assignment", emoji: "📋" },
+  { href: "/teacher/quizzes",      label: "Test",       emoji: "🧩" },
+  { href: "/teacher/videos",       label: "Videos",     emoji: "🎬" },
 ]
 
 const studentLinks = [
-  { href: "/student", label: "Dashboard", emoji: "🏠", exact: true },
-  { href: "/student/classrooms", label: "Course", emoji: "📚" },
+  { href: "/student",             label: "Dashboard",  emoji: "🏠", exact: true },
+  { href: "/student/classrooms",  label: "Course",     emoji: "📚" },
+  { href: "/student/assignments", label: "Assignment", emoji: "📋" },
+  { href: "/student/quizzes",     label: "Test",       emoji: "🧩" },
 ]
 
 export function Sidebar({ profile }: SidebarProps) {
@@ -80,9 +82,7 @@ export function Sidebar({ profile }: SidebarProps) {
           onClick={handleLogout}
           className="flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-bold text-slate-700 hover:bg-red-200 transition-colors w-full"
         >
-          <span className="w-8 h-8 rounded-full bg-white/70 flex items-center justify-center text-base flex-shrink-0">
-            🚪
-          </span>
+          <span className="w-8 h-8 rounded-full bg-white/70 flex items-center justify-center text-base flex-shrink-0">🚪</span>
           Logout
         </button>
       </div>
